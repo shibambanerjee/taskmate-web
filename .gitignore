@@ -1,0 +1,16 @@
+# IDE
+.idea/
+.vscode/
+
+# Node (if added later)
+node_modules/
+*.log
+npm-debug.log*
+
+# macOS/Windows
+.DS_Store
+Thumbs.db
+
+# Build artifacts (if any)
+dist/
+build/
