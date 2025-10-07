@@ -425,6 +425,16 @@
       return isSecure && ('Notification' in window);
     }
 
+    function updateNotifyUI() {
+      const btn = byId('askNotifyBtn');
+      if (!btn) return;
+      if (typeof Notification === 'undefined') return;
+      const p = Notification.permission;
+      const granted = p === 'granted';
+      btn.textContent = granted ? 'Notifications Enabled' : 'Enable Notifications';
+      btn.disabled = granted ? true : false;
+    }
+
     async function requestNotifications() {
       if (isCapacitorLocalAvailable()) {
         try {
@@ -443,6 +453,11 @@
       }
       Notification.requestPermission().then(p => {
         if (p !== 'granted') alert('Notifications permission denied. You can enable it later.');
+        updateNotifyUI();
+        if (p === 'granted') {
+          // brief confirmation for users
+          try { const n = new Notification('Notifications enabled'); setTimeout(()=>n.close(), 2000); } catch {}
+        }
       });
     }
     byId('askNotifyBtn').addEventListener('click', requestNotifications);
@@ -872,6 +887,7 @@
       } else {
         hint.textContent = 'Notifications are supported on this device.';
       }
+      updateNotifyUI();
       // load note draft
       try {
         const d = JSON.parse(sessionStorage.getItem('note_draft'));
