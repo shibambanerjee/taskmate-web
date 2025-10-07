@@ -480,6 +480,14 @@
           const p = await Notification.requestPermission();
           if (p !== 'granted') { alert('Permission denied'); return; }
         }
+        // Prefer service worker notifications on mobile Chrome
+        if (navigator.serviceWorker) {
+          const reg = await navigator.serviceWorker.getRegistration();
+          if (reg) {
+            await reg.showNotification('Test Notification', { body: 'If you see this, web notifications work.' });
+            return;
+          }
+        }
         const n = new Notification('Test Notification', { body: 'If you see this, web notifications work.' });
         setTimeout(()=>n.close(), 5000);
       } catch (e) { alert('Failed to show test notification.'); }
@@ -518,8 +526,15 @@
       }
 
       if (!('Notification' in window) || Notification.permission !== 'granted') return;
-      const id = setTimeout(() => {
+      const id = setTimeout(async () => {
         try {
+          if (navigator.serviceWorker) {
+            const reg = await navigator.serviceWorker.getRegistration();
+            if (reg) {
+              await reg.showNotification('Task Due', { body: `${task.title} • ${task.date} ${task.time}` });
+              return;
+            }
+          }
           const n = new Notification('Task Due', { body: `${task.title} • ${task.date} ${task.time}` });
           setTimeout(()=>n.close(), 8000);
         } catch {}
@@ -875,6 +890,10 @@
       if (window.matchMedia) {
         const mq = window.matchMedia('(prefers-color-scheme: dark)');
         mq.addEventListener?.('change', ()=>{ if ((settings.theme||'system')==='system') applyTheme('system'); });
+      }
+      // Register service worker for mobile-friendly notifications
+      if ('serviceWorker' in navigator) {
+        try { await navigator.serviceWorker.register('./sw.js'); } catch {}
       }
       // Notification support hint
       const hint = document.getElementById('notifySupportHint');
