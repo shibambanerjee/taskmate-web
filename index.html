@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Offline Tasks · Notes · Calendar</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --bg-elev: #ffffff;
+      --text: #0f172a;
+      --muted: #6b7280;
+      --card: #ffffff;
+      --accent: #8b5cf6;
+      --accent-2: #22c55e;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
+      --ring: rgba(139, 92, 246, 0.35);
+      --border: #e5e7eb;
+      --gradient: linear-gradient(135deg, #fce7f3, #e0e7ff, #dcfce7);
+      --bottom-nav-h: 64px;
+    }
+
+    html[data-theme="dark"] {
+      --bg: #0b1220;
+      --bg-elev: #0f172a;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --card: #111827;
+      --accent: #a78bfa;
+      --accent-2: #34d399;
+      --danger: #f87171;
+      --warning: #fbbf24;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+      --ring: rgba(167, 139, 250, 0.35);
+      --border: #1f2937;
+      --gradient: linear-gradient(135deg, #1f2937, #0f172a, #0b1220);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, Noto Sans, "Apple Color Emoji", "Segoe UI Emoji";
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    header { display: none; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 16px; }
+    .row { display: flex; align-items: center; gap: 12px; }
+    .spacer { flex: 1; }
+
+    .brand {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 800; letter-spacing: .3px;
+      background: linear-gradient(120deg, #8b5cf6, #ec4899, #06b6d4);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+
+    .tabbar {
+      display: grid; grid-auto-flow: column; gap: 8px;
+      background: var(--bg-elev);
+      padding: 6px; border-radius: 14px; border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+    .tabbtn {
+      border: 0; background: transparent; color: var(--muted);
+      padding: 8px 14px; border-radius: 10px; cursor: pointer; font-weight: 600;
+      transition: all .2s ease;
+    }
+    .tabbtn.active { color: var(--text); background: rgba(139,92,246,.16); }
+    .tabbtn:hover { color: var(--text); }
+
+    .theme-toggle { display: inline-flex; align-items: center; gap: 8px; }
+    .switch {
+      position: relative; width: 52px; height: 30px; background: var(--bg-elev);
+      border: 1px solid var(--border); border-radius: 999px; cursor: pointer;
+      transition: background .2s ease; box-shadow: var(--shadow);
+    }
+    .switch::after {
+      content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%;
+      background: var(--card); box-shadow: 0 5px 15px rgba(0,0,0,.15); transition: transform .2s ease;
+    }
+    .switch[data-on="true"]::after { transform: translateX(22px); }
+
+    main { padding: 16px 16px calc(var(--bottom-nav-h) + 24px); }
+    main > section { min-height: calc(100dvh - var(--bottom-nav-h) - 32px); }
+
+    .grid {
+      display: grid; gap: 16px; grid-template-columns: repeat(12, 1fr);
+    }
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      box-shadow: var(--shadow); padding: 16px; transition: transform .2s ease, box-shadow .2s ease;
+    }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(2,6,23,.12); }
+
+    .title { font-size: 20px; font-weight: 800; margin: 0 0 8px; letter-spacing: .2px; }
+    .subtitle { color: var(--muted); margin: 0 0 16px; font-size: 13px; line-height: 1.5; }
+
+    input[type="text"], input[type="date"], input[type="time"], textarea {
+      width: 100%; background: var(--bg-elev); border: 1px solid var(--border);
+      color: var(--text); padding: 10px 12px; border-radius: 10px; outline: none;
+      transition: box-shadow .15s ease, border-color .15s ease;
+    }
+    textarea { min-height: 120px; resize: vertical; }
+    input:focus, textarea:focus { box-shadow: 0 0 0 4px var(--ring); border-color: var(--accent); }
+
+    .btn {
+      border: 0; cursor: pointer; border-radius: 10px; padding: 10px 14px; font-weight: 700;
+      color: white; background: var(--accent); box-shadow: var(--shadow); transition: transform .1s ease, filter .2s ease;
+    }
+    .btn:hover { filter: brightness(1.05); }
+    .btn:active { transform: translateY(1px); }
+    .btn.secondary { background: var(--accent-2); }
+    .btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .btn.danger { background: var(--danger); }
+    .btn[disabled] { opacity: .6; cursor: not-allowed; }
+
+    .tasks-list { display: grid; gap: 12px; }
+    .task-item { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start; padding: 12px; border: 1px dashed var(--border); border-radius: 12px; }
+    .task-head { display: flex; gap: 8px; align-items: center; }
+    .status-dot { width: 10px; height: 10px; border-radius: 99px; background: var(--warning); }
+    .status-dot.done { background: var(--accent-2); }
+    .task-title { font-weight: 700; }
+    .task-meta { color: var(--muted); font-size: 12px; }
+    .task-actions { display: flex; gap: 6px; }
+
+    .hidden { display: none !important; }
+
+    /* Calendar */
+    .calendar {
+      display: grid; gap: 12px;
+    }
+    .cal-header { display: flex; align-items: center; gap: 10px; }
+    .cal-month { font-weight: 800; font-size: 18px; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+    .cal-cell { aspect-ratio: 1/1; min-height: 44px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 12px; padding: 10px; position: relative; cursor: pointer; overflow: hidden; transition: transform .1s ease; }
+    .cal-cell:hover { transform: translateY(-1px); }
+    .cal-day { font-size: 12px; color: var(--muted); }
+    .cal-num { font-weight: 800; }
+    .cal-dots { position: absolute; bottom: 6px; left: 6px; display: flex; gap: 4px; }
+    .cal-dot { width: 7px; height: 7px; border-radius: 99px; background: var(--accent); opacity: .9; }
+    .cal-mark { position: absolute; top: 6px; right: 6px; font-size: 14px; }
+    .mark-tick { color: var(--accent-2); }
+    .mark-cross { color: var(--danger); }
+
+    .day-details { display: grid; gap: 8px; }
+
+    /* Bottom navigation (all screens) */
+    .bottom-nav { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
+      background: var(--bg-elev); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow);
+      display: grid; grid-auto-flow: column; gap: 6px; padding: 8px; z-index: 20; width: calc(100% - 24px); max-width: 700px; }
+    .bottom-nav .tabbtn { color: var(--muted); padding: 12px 10px; border-radius: 12px; font-weight: 800; }
+    .bottom-nav .tabbtn.active { color: var(--text); background: linear-gradient(135deg, rgba(139,92,246,.22), rgba(236,72,153,.18)); box-shadow: 0 0 0 3px rgba(139,92,246,.18) inset; }
+    .bottom-nav .tabbtn:hover { color: var(--text); }
+
+    /* Mobile first adjustments */
+    @media (max-width: 700px) {
+      .card { border-radius: 14px; padding: 14px; }
+      .title { font-size: 18px; }
+      .subtitle { font-size: 12px; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr !important; }
+      .cal-grid { gap: 6px; }
+      .cal-cell { padding: 8px; border-radius: 10px; }
+      .cal-dot { width: 6px; height: 6px; }
+      .bottom-nav { gap: 4px; padding: 6px; max-width: 560px; }
+      .bottom-nav .tabbtn { padding: 10px 8px; font-size: 13px; }
+    }
+
+    @media (min-width: 900px) {
+      .grid-2 { grid-template-columns: repeat(2, 1fr); }
+      .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    /* Micro animations */
+    .fade-in { animation: fade .25s ease; }
+    @keyframes fade { from { opacity: 0; transform: translateY(4px);} to { opacity: 1; transform: translateY(0);} }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container row" style="gap:16px; padding-top:12px; padding-bottom:12px;">
+      <div class="brand">Tasks · Notes · Calendar</div>
+      <div class="spacer"></div>
+      <nav class="tabbar top" role="tablist" aria-label="Primary">
+        <button class="tabbtn active" data-tab="tasks">Tasks</button>
+        <button class="tabbtn" data-tab="notes">Notes</button>
+        <button class="tabbtn" data-tab="calendar">Calendar</button>
+        <button class="tabbtn" data-tab="settings">Settings</button>
+      </nav>
+      <div class="theme-toggle" title="Toggle theme">
+        <div id="themeSwitch" class="switch" data-on="false" aria-label="Theme toggle" role="switch" tabindex="0"></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Tasks Section -->
+    <section id="tab-tasks">
+      <div class="grid grid-2">
+        <div class="card">
+          <h3 class="title">New Task</h3>
+          <p class="subtitle">Add tasks with title, description, date, and time.</p>
+          <div style="display:grid; gap:10px;">
+            <input id="taskTitle" type="text" placeholder="Title" />
+            <textarea id="taskDesc" placeholder="Description"></textarea>
+            <div class="grid" style="grid-template-columns: repeat(2, 1fr); gap: 10px;">
+              <input id="taskDate" type="date" />
+              <input id="taskTime" type="time" />
+            </div>
+            <div class="row" style="justify-content: flex-end;">
+              <button id="saveTaskBtn" class="btn">Save Task</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="title">Tasks</h3>
+          <p class="subtitle">Tap to mark done, edit or delete. Due tasks will notify.</p>
+          <div id="tasksList" class="tasks-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Notes Section -->
+    <section id="tab-notes" class="hidden">
+      <div class="grid grid-2">
+        <div class="card">
+          <h3 class="title">New Note</h3>
+          <p class="subtitle">Autosaves as you type.</p>
+          <div style="display:grid; gap:10px;">
+            <input id="noteTitle" type="text" placeholder="Note title" />
+            <textarea id="noteBody" placeholder="Write your note..."></textarea>
+            <div class="row" style="justify-content: flex-end; gap:8px;">
+              <button id="saveNoteBtn" class="btn secondary">Add Note</button>
+              <button id="clearNoteDraftBtn" class="btn ghost">Clear Draft</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="title">Notes</h3>
+          <p class="subtitle">Click a note to edit; delete when done.</p>
+          <div id="notesList" class="tasks-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Calendar Section -->
+    <section id="tab-calendar" class="hidden">
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="calendar">
+            <div class="cal-header">
+              <button id="prevMonth" class="btn ghost" aria-label="Previous month">‹</button>
+              <div class="cal-month" id="calMonth"></div>
+              <button id="nextMonth" class="btn ghost" aria-label="Next month">›</button>
+              <div class="spacer"></div>
+              <button id="todayBtn" class="btn ghost">Today</button>
+            </div>
+            <div class="cal-grid" id="calWeekdays"></div>
+            <div class="cal-grid" id="calGrid"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3 class="title">Day Details</h3>
+          <p class="subtitle">Tasks and notes for the selected date.</p>
+          <div class="day-details">
+            <div id="selectedDateLabel" class="task-meta"></div>
+            <div id="dayTasks" class="tasks-list"></div>
+            <div id="dayNotes" class="tasks-list"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Settings Section -->
+    <section id="tab-settings" class="hidden">
+      <div class="grid grid-3">
+        <div class="card">
+          <h3 class="title">Theme</h3>
+          <p class="subtitle">Light / Dark</p>
+          <div class="row"><button id="toggleThemeBtn" class="btn">Toggle Theme</button></div>
+        </div>
+        <div class="card">
+          <h3 class="title">Notifications</h3>
+          <p class="subtitle">Allow reminders for due tasks.</p>
+          <div class="row" style="gap:8px;">
+            <button id="askNotifyBtn" class="btn secondary">Enable Notifications</button>
+            <button id="testNotifyBtn" class="btn ghost">Test Notification</button>
+          </div>
+          <div id="notifySupportHint" class="task-meta" style="margin-top:8px;"></div>
+        </div>
+        <div class="card">
+          <h3 class="title">Storage</h3>
+          <p class="subtitle">Manage your local data.</p>
+          <div class="row" style="gap:8px;">
+            <button id="exportBtn" class="btn ghost">Export Data</button>
+            <button id="importBtn" class="btn ghost">Import Data</button>
+            <button id="clearAllBtn" class="btn danger">Clear All</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Bottom navigation (mobile) -->
+  <nav class="tabbar bottom-nav" role="tablist" aria-label="Primary mobile">
+    <button class="tabbtn active" data-tab="tasks">Tasks</button>
+    <button class="tabbtn" data-tab="notes">Notes</button>
+    <button class="tabbtn" data-tab="calendar">Calendar</button>
+    <button class="tabbtn" data-tab="settings">Settings</button>
+  </nav>
+
+  <template id="taskItemTpl">
+    <div class="task-item fade-in">
+      <div>
+        <div class="task-head">
+          <span class="status-dot"></span>
+          <span class="task-title"></span>
+        </div>
+        <div class="task-meta"></div>
+        <div class="task-desc" style="margin-top:6px; white-space: pre-wrap;"></div>
+      </div>
+      <div class="task-actions">
+        <button class="btn ghost btn-complete" title="Toggle complete">✔️</button>
+        <button class="btn ghost btn-edit" title="Edit">✏️</button>
+        <button class="btn danger btn-delete" title="Delete">🗑️</button>
+      </div>
+    </div>
+  </template>
+
+  <template id="noteItemTpl">
+    <div class="task-item fade-in">
+      <div>
+        <div class="task-head">
+          <span class="status-dot done"></span>
+          <span class="task-title"></span>
+        </div>
+        <div class="task-meta"></div>
+        <div class="task-desc" style="margin-top:6px; white-space: pre-wrap;"></div>
+      </div>
+      <div class="task-actions">
+        <button class="btn ghost btn-edit" title="Edit">✏️</button>
+        <button class="btn danger btn-delete" title="Delete">🗑️</button>
+      </div>
+    </div>
+  </template>
+
+  <script>
+    // Utilities
+    const byId = (id) => document.getElementById(id);
+    const qs = (sel, el = document) => el.querySelector(sel);
+    const qsa = (sel, el = document) => Array.from(el.querySelectorAll(sel));
+    const formatDate = (d) => new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+    const todayStr = () => formatDate(new Date());
+    const at = (dateStr, timeStr) => new Date(timeStr ? `${dateStr}T${timeStr}` : `${dateStr}T00:00`);
+    const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+    const debounce = (fn, wait=300) => { let t; return (...args) => { clearTimeout(t); t = setTimeout(()=>fn(...args), wait); } };
+
+    // Storage
+    const STORAGE_KEYS = {
+      tasks: 'app_tasks_v1',
+      notes: 'app_notes_v1',
+      settings: 'app_settings_v1',
+      marks: 'app_calendar_marks_v1'
+    };
+    const load = (k, fb) => { try { return JSON.parse(localStorage.getItem(k)) ?? fb; } catch { return fb; } };
+    const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+
+    // Global state
+    let tasks = load(STORAGE_KEYS.tasks, []);
+    let notes = load(STORAGE_KEYS.notes, []);
+    let settings = load(STORAGE_KEYS.settings, { theme: 'system' });
+    let marks = load(STORAGE_KEYS.marks, {}); // { 'YYYY-MM-DD': 'tick' | 'cross' }
+    let selectedDate = todayStr();
+    let currentMonth = new Date();
+    const notifyTimeouts = new Map(); // taskId -> timeoutId
+
+    // Theme
+    function getSystemTheme() { return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    function applyTheme(theme) {
+      const actual = theme === 'system' ? getSystemTheme() : theme;
+      document.documentElement.setAttribute('data-theme', actual);
+      const on = actual === 'dark';
+      byId('themeSwitch').dataset.on = String(on);
+    }
+    function toggleTheme() {
+      // Cycle system -> light -> dark -> system
+      settings.theme = settings.theme === 'system' ? 'light' : settings.theme === 'light' ? 'dark' : 'system';
+      save(STORAGE_KEYS.settings, settings);
+      applyTheme(settings.theme);
+    }
+
+    // Tabs
+    qsa('.tabbtn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        qsa('.tabbtn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        const tgt = btn.dataset.tab;
+        qsa('main > section').forEach(sec => sec.classList.toggle('hidden', sec.id !== `tab-${tgt}`));
+        if (tgt === 'calendar') renderCalendar();
+      });
+    });
+
+    // Theme switch click and keyboard
+    byId('themeSwitch').addEventListener('click', toggleTheme);
+    byId('themeSwitch').addEventListener('keydown', (e)=>{ if (e.key==='Enter' || e.key===' ') { e.preventDefault(); toggleTheme(); } });
+    byId('toggleThemeBtn').addEventListener('click', toggleTheme);
+
+    // Notifications
+    function isCapacitorLocalAvailable() {
+      return !!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications);
+    }
+
+    function isSecureContextForNotifications() {
+      // Web Notification API requires HTTPS or localhost in most browsers
+      const isSecure = window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      return isSecure && ('Notification' in window);
+    }
+
+    async function requestNotifications() {
+      if (isCapacitorLocalAvailable()) {
+        try {
+          const { LocalNotifications } = window.Capacitor.Plugins;
+          const perm = await LocalNotifications.requestPermissions();
+          if (perm.display !== 'granted') alert('Local notifications permission denied.');
+          else alert('Local notifications enabled.');
+        } catch (e) {
+          alert('Failed to request local notifications.');
+        }
+        return;
+      }
+      if (!isSecureContextForNotifications()) {
+        alert('Notifications require HTTPS or localhost. Please host this file via a local server (http://localhost) or deploy over HTTPS.');
+        return;
+      }
+      Notification.requestPermission().then(p => {
+        if (p !== 'granted') alert('Notifications permission denied. You can enable it later.');
+      });
+    }
+    byId('askNotifyBtn').addEventListener('click', requestNotifications);
+    byId('testNotifyBtn').addEventListener('click', async ()=>{
+      try {
+        if (isCapacitorLocalAvailable()) {
+          const { LocalNotifications } = window.Capacitor.Plugins;
+          await LocalNotifications.requestPermissions();
+          await LocalNotifications.schedule({ notifications: [{
+            id: Math.floor(Math.random()*1e9),
+            title: 'Test Notification',
+            body: 'If you see this, notifications are working!',
+            schedule: { at: new Date(Date.now() + 1000) },
+            smallIcon: 'ic_stat_notification',
+          }]});
+          return;
+        }
+        if (!isSecureContextForNotifications()) { alert('HTTPS or localhost needed.'); return; }
+        if (Notification.permission !== 'granted') {
+          const p = await Notification.requestPermission();
+          if (p !== 'granted') { alert('Permission denied'); return; }
+        }
+        const n = new Notification('Test Notification', { body: 'If you see this, web notifications work.' });
+        setTimeout(()=>n.close(), 5000);
+      } catch (e) { alert('Failed to show test notification.'); }
+    });
+
+    async function scheduleTaskNotification(task) {
+      // clear previous
+      const prev = notifyTimeouts.get(task.id);
+      if (prev) { clearTimeout(prev); notifyTimeouts.delete(task.id); }
+      if (!task.date || !task.time) return;
+      if (task.status === 'done') return;
+
+      const when = at(task.date, task.time).getTime();
+      const now = Date.now();
+      const delay = when - now;
+      if (delay <= 0) return; // past
+
+      if (isCapacitorLocalAvailable()) {
+        try {
+          const { LocalNotifications } = window.Capacitor.Plugins;
+          // Use a stable numeric id for plugin (hash last 9 digits of timestamp)
+          const numericId = Math.abs(parseInt(String(task.id).replace(/\D/g,'').slice(-9) || Date.now()%1e9));
+          await LocalNotifications.schedule({
+            notifications: [{
+              id: numericId,
+              title: 'Task Due',
+              body: `${task.title} • ${task.date} ${task.time}`,
+              schedule: { at: new Date(when) },
+              smallIcon: 'ic_stat_notification',
+            }]
+          });
+        } catch (e) {
+          console.warn('Capacitor schedule failed', e);
+        }
+        return;
+      }
+
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      const id = setTimeout(() => {
+        try {
+          const n = new Notification('Task Due', { body: `${task.title} • ${task.date} ${task.time}` });
+          setTimeout(()=>n.close(), 8000);
+        } catch {}
+      }, Math.min(delay, 2147483647)); // clamp to max setTimeout
+      notifyTimeouts.set(task.id, id);
+    }
+
+    async function rescheduleAllNotifications() {
+      notifyTimeouts.forEach(t=>clearTimeout(t));
+      notifyTimeouts.clear();
+      if (isCapacitorLocalAvailable()) {
+        try {
+          const { LocalNotifications } = window.Capacitor.Plugins;
+          await LocalNotifications.cancel({ notifications: [] });
+        } catch {}
+      }
+      tasks.forEach(scheduleTaskNotification);
+    }
+
+    // Tasks CRUD
+    function persistTasks() { save(STORAGE_KEYS.tasks, tasks); renderTasks(); renderCalendar(); rescheduleAllNotifications(); }
+
+    function renderTasks() {
+      const list = byId('tasksList');
+      list.innerHTML = '';
+      const sorted = [...tasks].sort((a,b)=>{
+        const atA = a.date ? at(a.date, a.time || '00:00').getTime() : Infinity;
+        const atB = b.date ? at(b.date, b.time || '00:00').getTime() : Infinity;
+        return atA - atB;
+      });
+      const tpl = byId('taskItemTpl');
+      sorted.forEach(task => {
+        const node = tpl.content.firstElementChild.cloneNode(true);
+        qs('.task-title', node).textContent = task.title || '(Untitled)';
+        qs('.task-desc', node).textContent = task.description || '';
+        const meta = [];
+        if (task.date) meta.push(task.date);
+        if (task.time) meta.push(task.time);
+        meta.push(task.status === 'done' ? 'Completed' : 'Pending');
+        qs('.task-meta', node).textContent = meta.join(' • ');
+        const dot = qs('.status-dot', node);
+        dot.classList.toggle('done', task.status === 'done');
+
+        // actions
+        qs('.btn-complete', node).addEventListener('click', ()=>{
+          task.status = task.status === 'done' ? 'pending' : 'done';
+          persistTasks();
+        });
+        qs('.btn-edit', node).addEventListener('click', ()=>{
+          byId('taskTitle').value = task.title;
+          byId('taskDesc').value = task.description || '';
+          byId('taskDate').value = task.date || '';
+          byId('taskTime').value = task.time || '';
+          byId('saveTaskBtn').dataset.editing = task.id;
+          byId('saveTaskBtn').textContent = 'Update Task';
+        });
+        qs('.btn-delete', node).addEventListener('click', ()=>{
+          if (!confirm('Delete this task?')) return;
+          tasks = tasks.filter(t=>t.id !== task.id);
+          persistTasks();
+        });
+        list.appendChild(node);
+      });
+    }
+
+    byId('saveTaskBtn').addEventListener('click', ()=>{
+      const title = byId('taskTitle').value.trim();
+      const description = byId('taskDesc').value.trim();
+      const date = byId('taskDate').value || '';
+      const time = byId('taskTime').value || '';
+      if (!title) { alert('Please enter a title'); return; }
+      const editingId = byId('saveTaskBtn').dataset.editing;
+      if (editingId) {
+        const task = tasks.find(t=>t.id===editingId);
+        if (task) { task.title = title; task.description = description; task.date = date; task.time = time; }
+        byId('saveTaskBtn').dataset.editing = '';
+        byId('saveTaskBtn').textContent = 'Save Task';
+      } else {
+        tasks.push({ id: uid(), title, description, date, time, status: 'pending', createdAt: Date.now() });
+      }
+      byId('taskTitle').value = '';
+      byId('taskDesc').value = '';
+      byId('taskDate').value = '';
+      byId('taskTime').value = '';
+      persistTasks();
+    });
+
+    // Notes CRUD
+    function persistNotes() { save(STORAGE_KEYS.notes, notes); renderNotes(); renderDayDetails(selectedDate); }
+
+    function renderNotes() {
+      const list = byId('notesList');
+      list.innerHTML = '';
+      const tpl = byId('noteItemTpl');
+      const sorted = [...notes].sort((a,b)=>b.updatedAt - a.updatedAt);
+      sorted.forEach(note => {
+        const node = tpl.content.firstElementChild.cloneNode(true);
+        qs('.task-title', node).textContent = note.title || '(Untitled)';
+        qs('.task-desc', node).textContent = note.body || '';
+        const meta = [note.date || ''];
+        qs('.task-meta', node).textContent = meta.filter(Boolean).join(' • ');
+        qs('.btn-edit', node).addEventListener('click', ()=>{
+          byId('noteTitle').value = note.title;
+          byId('noteBody').value = note.body || '';
+          byId('saveNoteBtn').dataset.editing = note.id;
+          byId('saveNoteBtn').textContent = 'Update Note';
+        });
+        qs('.btn-delete', node).addEventListener('click', ()=>{
+          if (!confirm('Delete this note?')) return;
+          notes = notes.filter(n=>n.id !== note.id);
+          persistNotes();
+        });
+        list.appendChild(node);
+      });
+    }
+
+    const autosaveNoteDraft = debounce(()=>{
+      const draft = {
+        title: byId('noteTitle').value,
+        body: byId('noteBody').value
+      };
+      sessionStorage.setItem('note_draft', JSON.stringify(draft));
+    }, 400);
+
+    byId('noteTitle').addEventListener('input', autosaveNoteDraft);
+    byId('noteBody').addEventListener('input', autosaveNoteDraft);
+    byId('clearNoteDraftBtn').addEventListener('click', ()=>{
+      byId('noteTitle').value = '';
+      byId('noteBody').value = '';
+      sessionStorage.removeItem('note_draft');
+    });
+
+    byId('saveNoteBtn').addEventListener('click', ()=>{
+      const title = byId('noteTitle').value.trim();
+      const body = byId('noteBody').value.trim();
+      const date = selectedDate || todayStr();
+      if (!title && !body) { alert('Write something for the note.'); return; }
+      const editingId = byId('saveNoteBtn').dataset.editing;
+      if (editingId) {
+        const note = notes.find(n=>n.id===editingId);
+        if (note) { note.title = title; note.body = body; note.date = date; note.updatedAt = Date.now(); }
+        byId('saveNoteBtn').dataset.editing = '';
+        byId('saveNoteBtn').textContent = 'Add Note';
+      } else {
+        notes.push({ id: uid(), title, body, date, createdAt: Date.now(), updatedAt: Date.now() });
+      }
+      byId('noteTitle').value = '';
+      byId('noteBody').value = '';
+      sessionStorage.removeItem('note_draft');
+      persistNotes();
+    });
+
+    // Calendar
+    const WEEKDAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    function renderCalendar() {
+      // Weekdays header
+      const wd = byId('calWeekdays');
+      if (!wd.dataset.rendered) {
+        WEEKDAYS.forEach(d=>{
+          const el = document.createElement('div');
+          el.className = 'cal-cell';
+          el.style.aspectRatio = 'unset';
+          el.style.background = 'transparent';
+          el.style.border = '0';
+          el.style.fontWeight = '700';
+          el.style.textAlign = 'center';
+          el.textContent = d;
+          wd.appendChild(el);
+        });
+        wd.dataset.rendered = 'true';
+      }
+
+      const monthLabel = byId('calMonth');
+      const y = currentMonth.getFullYear();
+      const m = currentMonth.getMonth();
+      monthLabel.textContent = `${currentMonth.toLocaleString(undefined,{month:'long'})} ${y}`;
+
+      const first = new Date(y, m, 1);
+      const startDay = first.getDay();
+      const daysInMonth = new Date(y, m+1, 0).getDate();
+      const grid = byId('calGrid');
+      grid.innerHTML = '';
+
+      for (let i=0; i<startDay; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'cal-cell';
+        empty.style.visibility = 'hidden';
+        grid.appendChild(empty);
+      }
+      for (let d=1; d<=daysInMonth; d++) {
+        const dateObj = new Date(y, m, d);
+        const dateStr = formatDate(dateObj);
+        const cell = document.createElement('div');
+        cell.className = 'cal-cell fade-in';
+
+        const num = document.createElement('div');
+        num.className = 'cal-num';
+        num.textContent = d;
+        cell.appendChild(num);
+
+        const day = document.createElement('div');
+        day.className = 'cal-day';
+        day.textContent = WEEKDAYS[dateObj.getDay()];
+        cell.appendChild(day);
+
+        const dots = document.createElement('div');
+        dots.className = 'cal-dots';
+        const dayTasks = tasks.filter(t=>t.date === dateStr);
+        dayTasks.slice(0,3).forEach(()=>{
+          const dot = document.createElement('div');
+          dot.className = 'cal-dot'; dots.appendChild(dot);
+        });
+        cell.appendChild(dots);
+
+        const mark = marks[dateStr];
+        if (mark) {
+          const mEl = document.createElement('div');
+          mEl.className = 'cal-mark ' + (mark==='tick' ? 'mark-tick' : 'mark-cross');
+          mEl.textContent = mark === 'tick' ? '✔️' : '❌';
+          cell.appendChild(mEl);
+        }
+
+        if (dateStr === selectedDate) {
+          cell.style.outline = '2px solid var(--accent)';
+        }
+
+        cell.addEventListener('click', ()=>{
+          selectedDate = dateStr;
+          renderCalendar();
+          renderDayDetails(selectedDate);
+        });
+
+        cell.addEventListener('contextmenu', (e)=>{
+          e.preventDefault();
+          // cycle: none -> tick -> cross -> none
+          const prev = marks[dateStr] || 'none';
+          const next = prev === 'none' ? 'tick' : prev === 'tick' ? 'cross' : 'none';
+          if (next==='none') delete marks[dateStr]; else marks[dateStr] = next;
+          save(STORAGE_KEYS.marks, marks);
+          renderCalendar();
+        });
+
+        grid.appendChild(cell);
+      }
+
+      byId('selectedDateLabel').textContent = `Selected: ${selectedDate}`;
+      renderDayDetails(selectedDate);
+    }
+
+    function renderDayDetails(dateStr) {
+      const dTasks = tasks.filter(t=>t.date === dateStr);
+      const dNotes = notes.filter(n=>n.date === dateStr);
+      const tasksWrap = byId('dayTasks');
+      const notesWrap = byId('dayNotes');
+      tasksWrap.innerHTML = '<div class="task-meta">Tasks</div>';
+      notesWrap.innerHTML = '<div class="task-meta">Notes</div>';
+
+      const tt = byId('taskItemTpl');
+      dTasks.forEach(t=>{
+        const node = tt.content.firstElementChild.cloneNode(true);
+        qs('.task-title', node).textContent = t.title || '(Untitled)';
+        qs('.task-desc', node).textContent = t.description || '';
+        const meta = [];
+        if (t.time) meta.push(t.time);
+        meta.push(t.status === 'done' ? 'Completed' : 'Pending');
+        qs('.task-meta', node).textContent = meta.join(' • ');
+        qs('.btn-complete', node).addEventListener('click', ()=>{ t.status = t.status === 'done' ? 'pending':'done'; persistTasks(); renderDayDetails(dateStr); });
+        qs('.btn-edit', node).addEventListener('click', ()=>{
+          byId('taskTitle').value = t.title;
+          byId('taskDesc').value = t.description || '';
+          byId('taskDate').value = t.date || '';
+          byId('taskTime').value = t.time || '';
+          byId('saveTaskBtn').dataset.editing = t.id;
+          byId('saveTaskBtn').textContent = 'Update Task';
+        });
+        qs('.btn-delete', node).addEventListener('click', ()=>{ if (!confirm('Delete this task?')) return; tasks = tasks.filter(x=>x.id!==t.id); persistTasks(); renderDayDetails(dateStr); });
+        tasksWrap.appendChild(node);
+      });
+
+      const nt = byId('noteItemTpl');
+      dNotes.forEach(n=>{
+        const node = nt.content.firstElementChild.cloneNode(true);
+        qs('.task-title', node).textContent = n.title || '(Untitled)';
+        qs('.task-desc', node).textContent = n.body || '';
+        qs('.task-meta', node).textContent = '';
+        qs('.btn-edit', node).addEventListener('click', ()=>{
+          byId('noteTitle').value = n.title;
+          byId('noteBody').value = n.body || '';
+          byId('saveNoteBtn').dataset.editing = n.id;
+          byId('saveNoteBtn').textContent = 'Update Note';
+        });
+        qs('.btn-delete', node).addEventListener('click', ()=>{ if (!confirm('Delete this note?')) return; notes = notes.filter(x=>x.id!==n.id); persistNotes(); });
+        notesWrap.appendChild(node);
+      });
+    }
+
+    // Calendar controls
+    byId('prevMonth').addEventListener('click', ()=>{ currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth()-1, 1); renderCalendar(); });
+    byId('nextMonth').addEventListener('click', ()=>{ currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth()+1, 1); renderCalendar(); });
+    byId('todayBtn').addEventListener('click', ()=>{ currentMonth = new Date(); selectedDate = todayStr(); renderCalendar(); });
+
+    // Settings: export / import / clear
+    byId('exportBtn').addEventListener('click', ()=>{
+      const data = {
+        tasks, notes, settings, marks, exportedAt: new Date().toISOString()
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'offline-app-data.json'; a.click();
+      URL.revokeObjectURL(url);
+    });
+    byId('importBtn').addEventListener('click', ()=>{
+      const input = document.createElement('input');
+      input.type = 'file'; input.accept = 'application/json';
+      input.onchange = () => {
+        const file = input.files?.[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const data = JSON.parse(reader.result);
+            tasks = Array.isArray(data.tasks) ? data.tasks : tasks;
+            notes = Array.isArray(data.notes) ? data.notes : notes;
+            settings = data.settings || settings;
+            marks = data.marks || marks;
+            save(STORAGE_KEYS.tasks, tasks);
+            save(STORAGE_KEYS.notes, notes);
+            save(STORAGE_KEYS.settings, settings);
+            save(STORAGE_KEYS.marks, marks);
+            applyTheme(settings.theme || 'light');
+            renderTasks(); renderNotes(); renderCalendar(); rescheduleAllNotifications();
+            alert('Data imported successfully.');
+          } catch (e) { alert('Failed to import data.'); }
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+    });
+    byId('clearAllBtn').addEventListener('click', ()=>{
+      if (!confirm('This will clear ALL local data. Continue?')) return;
+      tasks = []; notes = []; marks = {}; settings = { theme: settings.theme };
+      save(STORAGE_KEYS.tasks, tasks);
+      save(STORAGE_KEYS.notes, notes);
+      save(STORAGE_KEYS.marks, marks);
+      save(STORAGE_KEYS.settings, settings);
+      renderTasks(); renderNotes(); renderCalendar(); rescheduleAllNotifications();
+    });
+
+    // Init
+    (function init(){
+      applyTheme(settings.theme || 'system');
+      // react to system theme changes if in system mode
+      if (window.matchMedia) {
+        const mq = window.matchMedia('(prefers-color-scheme: dark)');
+        mq.addEventListener?.('change', ()=>{ if ((settings.theme||'system')==='system') applyTheme('system'); });
+      }
+      // Notification support hint
+      const hint = document.getElementById('notifySupportHint');
+      const btn = document.getElementById('askNotifyBtn');
+      if (isCapacitorLocalAvailable()) {
+        hint.textContent = 'Using device local notifications (Capacitor).';
+      } else if (!isSecureContextForNotifications()) {
+        btn.setAttribute('disabled','true');
+        hint.textContent = 'Notifications need HTTPS or localhost. Running from file:// cannot show notifications.';
+      } else {
+        hint.textContent = 'Notifications are supported on this device.';
+      }
+      // load note draft
+      try {
+        const d = JSON.parse(sessionStorage.getItem('note_draft'));
+        if (d) { byId('noteTitle').value = d.title || ''; byId('noteBody').value = d.body || ''; }
+      } catch {}
+      renderTasks();
+      renderNotes();
+      renderCalendar();
+      rescheduleAllNotifications();
+    })();
+  </script>
+</body>
+</html>
+
+
